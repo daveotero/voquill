@@ -411,7 +411,10 @@ const AppKeybindingRow = ({
             </Typography>
             <Stack direction="row" alignItems="center" spacing={0.5}>
               <Typography variant="caption" color="text.secondary">
-                <FormattedMessage defaultMessage="Use default" />
+                <FormattedMessage
+                  defaultMessage="Use default ({speed}ms)"
+                  values={{ speed: defaultTypingSpeedMs }}
+                />
               </Typography>
               <Switch
                 size="small"
