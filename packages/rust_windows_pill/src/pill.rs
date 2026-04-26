@@ -6,8 +6,10 @@ use windows::core::*;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Gdi::*;
 use windows::Win32::System::LibraryLoader::*;
+use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER};
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::Input::KeyboardAndMouse::*;
+use windows::Win32::UI::Shell::{IVirtualDesktopManager, VirtualDesktopManager};
 use windows::Win32::UI::WindowsAndMessaging::*;
 
 use crate::constants::*;
@@ -31,6 +33,7 @@ thread_local! {
     static EDIT_CONTAINER: Cell<HWND> = const { Cell::new(HWND(std::ptr::null_mut())) };
     static EDIT_HWND: Cell<HWND> = const { Cell::new(HWND(std::ptr::null_mut())) };
     static EDIT_BG_BRUSH: Cell<HBRUSH> = const { Cell::new(HBRUSH(std::ptr::null_mut())) };
+    static VDM: RefCell<Option<IVirtualDesktopManager>> = const { RefCell::new(None) };
 }
 
 fn get_dpi_scale() -> f64 {
@@ -165,6 +168,12 @@ pub fn run(receiver: Receiver<InMessage>) {
     STATE.with(|s| *s.borrow_mut() = Some(state));
     GFX.with(|g| *g.borrow_mut() = Some(gfx));
     RECEIVER.with(|r| *r.borrow_mut() = Some(receiver));
+
+    // Initialize Virtual Desktop Manager so the pill follows across desktops
+    match unsafe { CoCreateInstance(&VirtualDesktopManager, None, CLSCTX_INPROC_SERVER) } {
+        Ok(vdm) => VDM.with(|c| *c.borrow_mut() = Some(vdm)),
+        Err(e) => eprintln!("[pill] VirtualDesktopManager unavailable: {e:?}"),
+    }
 
     create_edit_overlay(hinstance, hwnd);
     eprintln!("[pill] edit overlay created in {:?}", t0.elapsed());
@@ -376,6 +385,43 @@ fn on_cursor_tick(hwnd: HWND) {
         if let Some(ref state) = *s.borrow() {
             check_hover(hwnd, state);
             reposition_to_cursor_monitor(hwnd);
+        }
+    });
+    ensure_on_current_desktop(hwnd);
+}
+
+fn ensure_on_current_desktop(hwnd: HWND) {
+    VDM.with(|v| {
+        let vdm_guard = v.borrow();
+        let vdm = match &*vdm_guard {
+            Some(ref vdm) => vdm,
+            None => return,
+        };
+        let result: windows::core::Result<windows::core::BOOL> =
+            unsafe { vdm.IsWindowOnCurrentVirtualDesktop(hwnd) };
+        if let Ok(is_on_current) = result {
+            if !is_on_current.as_bool() {
+                // Create a temporary window on the current desktop to get its GUID
+                if let Ok(temp_hwnd) = unsafe {
+                    CreateWindowExW(
+                        WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+                        w!("STATIC"),
+                        w!(""),
+                        WS_POPUP,
+                        0, 0, 1, 1,
+                        None, None, None, None,
+                    )
+                } {
+                    if let Ok(cur_desktop_id) =
+                        unsafe { vdm.GetWindowDesktopId(temp_hwnd) }
+                    {
+                        unsafe {
+                            let _ = vdm.MoveWindowToDesktop(hwnd, &cur_desktop_id);
+                        }
+                    }
+                    unsafe { let _ = DestroyWindow(temp_hwnd); }
+                }
+            }
         }
     });
 }
