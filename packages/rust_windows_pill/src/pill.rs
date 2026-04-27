@@ -53,6 +53,7 @@ fn get_dpi_scale() -> f64 {
 pub fn run(receiver: Receiver<InMessage>) {
     let t0 = Instant::now();
     unsafe {
+        let _ = windows::Win32::System::Com::CoInitializeEx(None, windows::Win32::System::Com::COINIT_APARTMENTTHREADED);
         let _ = windows::Win32::UI::HiDpi::SetProcessDpiAwarenessContext(
             windows::Win32::UI::HiDpi::DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
         );
@@ -193,6 +194,7 @@ pub fn run(receiver: Receiver<InMessage>) {
             while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
                 if msg.message == WM_QUIT {
                     windows::Win32::Media::timeEndPeriod(1);
+                    windows::Win32::System::Com::CoUninitialize();
                     return;
                 }
                 if handle_edit_message(&msg) { continue; }
@@ -211,6 +213,7 @@ pub fn run(receiver: Receiver<InMessage>) {
             }
         }
         windows::Win32::Media::timeEndPeriod(1);
+        windows::Win32::System::Com::CoUninitialize();
     }
 }
 
