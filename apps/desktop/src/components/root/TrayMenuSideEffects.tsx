@@ -13,8 +13,9 @@ import { setActiveTone } from "../../actions/tone.actions";
 import { useAsyncEffect } from "../../hooks/async.hooks";
 import { useTauriListen } from "../../hooks/tauri.hooks";
 import { getAppState, useAppStore } from "../../store";
-import { getActiveManualToneIds } from "../../utils/tone.utils";
+import { resolveDashboardSectionPath } from "../../utils/dashboard-navigation.utils";
 import { getLogger } from "../../utils/log.utils";
+import { getActiveManualToneIds } from "../../utils/tone.utils";
 
 type InputDeviceDescriptor = {
   label: string;
@@ -175,8 +176,11 @@ export const TrayMenuSideEffects = () => {
   }, [syncTrayMenu]);
 
   useTauriListen<string>("tray-navigate", (route) => {
-    const path =
-      route === "history" ? "/dashboard/transcriptions" : `/dashboard/${route}`;
+    const path = resolveDashboardSectionPath(route);
+    if (!path) {
+      getLogger().warning(`Unknown tray route: ${route}`);
+      return;
+    }
     browserRouter.navigate(path);
   });
 

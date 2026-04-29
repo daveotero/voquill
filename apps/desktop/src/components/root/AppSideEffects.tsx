@@ -60,6 +60,7 @@ import {
 import { getIsDevMode } from "../../utils/env.utils";
 import { addSelectedTextToDictionary } from "../../actions/dictionary.actions";
 import { ADD_TO_DICTIONARY_HOTKEY } from "../../utils/keyboard.utils";
+import { DASHBOARD_SECTION_PATHS } from "../../utils/dashboard-navigation.utils";
 import { getLogger, initLogging } from "../../utils/log.utils";
 import { isPermissionAuthorized } from "../../utils/permission.utils";
 import { getPlatform } from "../../utils/platform.utils";
@@ -570,8 +571,8 @@ export const AppSideEffects = () => {
     keys: [","],
     meta: true,
     callback: () => {
-      if (window.location.pathname !== "/dashboard/settings") {
-        window.location.href = "/dashboard/settings";
+      if (window.location.pathname !== DASHBOARD_SECTION_PATHS.settings) {
+        window.location.href = DASHBOARD_SECTION_PATHS.settings;
       }
     },
   });

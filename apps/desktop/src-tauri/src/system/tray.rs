@@ -69,10 +69,13 @@ pub fn build_tray_menu_from_config(
     let dictionary =
         MenuItem::with_id(app, "navigate-dictionary", "Dictionary", true, None::<&str>)?;
     let styles = MenuItem::with_id(app, "navigate-styles", "Styles", true, None::<&str>)?;
+    let settings =
+        MenuItem::with_id(app, "navigate-settings", "Settings", true, None::<&str>)?;
     menu.append(&home)?;
     menu.append(&history)?;
     menu.append(&dictionary)?;
     menu.append(&styles)?;
+    menu.append(&settings)?;
 
     menu.append(&PredefinedMenuItem::separator(app)?)?;
 
@@ -215,7 +218,8 @@ pub fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
                 "navigate-home"
                 | "navigate-history"
                 | "navigate-dictionary"
-                | "navigate-styles" => {
+                | "navigate-styles"
+                | "navigate-settings" => {
                     let route = menu_id.strip_prefix("navigate-").unwrap_or(menu_id);
                     if let Err(err) = app.emit(EVT_TRAY_NAVIGATE, route) {
                         log::error!("Failed to emit tray-navigate event: {err}");
