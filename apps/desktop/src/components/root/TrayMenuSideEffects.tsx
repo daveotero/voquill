@@ -16,6 +16,7 @@ import { getAppState, useAppStore } from "../../store";
 import { resolveDashboardSectionPath } from "../../utils/dashboard-navigation.utils";
 import { getLogger } from "../../utils/log.utils";
 import { getActiveManualToneIds } from "../../utils/tone.utils";
+import { surfaceMainWindow } from "../../utils/window.utils";
 
 type InputDeviceDescriptor = {
   label: string;
@@ -175,13 +176,14 @@ export const TrayMenuSideEffects = () => {
     await syncTrayMenu();
   }, [syncTrayMenu]);
 
-  useTauriListen<string>("tray-navigate", (route) => {
+  useTauriListen<string>("tray-navigate", async (route) => {
     const path = resolveDashboardSectionPath(route);
     if (!path) {
       getLogger().warning(`Unknown tray route: ${route}`);
       return;
     }
-    browserRouter.navigate(path);
+    await browserRouter.navigate(path);
+    await surfaceMainWindow();
   });
 
   useTauriListen<void>("tray-copy-last-transcription", () => {
